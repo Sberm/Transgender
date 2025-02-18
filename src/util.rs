@@ -178,7 +178,7 @@ pub fn print_path(_path: &PathBuf, dest_file: Option<&PathBuf>) {
         let mut file = File::create(dest_file.unwrap().as_path()).expect(&format!(
             "Failed to write to temporary destination file {}",
             dest_file
-                .unwrap()
+                .expect("Failed to unwrap dest file")
                 .as_path()
                 .to_str()
                 .expect("Failed to print the temporary destination file")

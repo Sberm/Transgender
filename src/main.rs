@@ -21,16 +21,34 @@ fn main() {
     let mut path = String::from(".");
     let mut dest_file: Option<String> = None;
 
-    // -v, --version
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
-        let option: &str = &args[1];
-        if option.eq("-v") || option.eq("--version") {
+    let mut args = env::args();
+    let print_help_message = || {
+        let help_message = r###"
+  transgender
+    --dest         FILE file that transgender outputs the destination to
+    -v, --version  Print current version
+    -h, --help     Show this message
+    --sh           Print transgender configuration shell script
+
+    Use transgender <DIR> to start transgender in DIR directory
+
+"###;
+        print!("{}", help_message);
+    };
+
+    loop {
+        let _s = args.next();
+        if _s.is_none() {
+            break;
+        }
+
+        let s = _s.expect("Failed to unwrap arguments");
+
+        if s.eq("-v") || s.eq("--version") {
             println!("\n  Transgender.rs\n\n    Regex-powered trans\n");
             exit(0);
-        } else if option.eq("--sh") {
-            let script = r###"
-ts() {
+        } else if s.eq("--sh") {
+            let script = r###"ts() {
   dest_file=$(mktemp -t "ts.XXXX")
   transgender $1 --dest "${dest_file}"
   dest_dir=$(tail -n 1 "${dest_file}")
@@ -50,19 +68,27 @@ fi
 "###;
             print!("{}", script);
             exit(0);
+        } else if s.eq("--dest") {
+            let _one_more = args.next();
+            if _one_more.is_none() {
+                println!("--dest: Please specify the file path with --dest FILE");
+                print_help_message();
+                exit(0);
+            }
+            dest_file = Some(_one_more.expect("Failed to unwrap destination file path"));
+        } else if s.eq("-h") || s.eq("--help") {
+            print_help_message();
+            exit(0);
         } else {
-            // otherwise the first argument will be identified as a path
-            let p = Path::new(&args[1]);
+            // the starting path with no argument name
+            let p = Path::new(&s);
             if p.is_dir() {
                 path = String::from(p.to_str().expect("Failed to convert an existed path"));
             }
         }
-
-        if args.len() > 2 && option.eq("--dest") {
-            dest_file = Some(args[2].clone());
-        }
     }
 
+    // multiple arguments with random order
     let mut canvas = canvas::new();
     let mut browser = browser::new(&path, dest_file);
 
