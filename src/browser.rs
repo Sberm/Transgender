@@ -7,7 +7,7 @@
 ╚═══════════════════════════════════════════════════════════════════════*/
 
 use crate::canvas;
-use crate::ops::{code, consts, Mode};
+use crate::ops::{Op, consts, Mode};
 use crate::util;
 use regex_lite::RegexBuilder;
 use std::fs::read_dir;
@@ -115,38 +115,38 @@ impl Browser {
                 continue;
             }
             match util::process_input() {
-                code::UP => {
+                Op::Up => {
                     self.up();
                 }
-                code::DOWN => {
+                Op::Down => {
                     self.down();
                 }
-                code::LEFT => {
+                Op::Left => {
                     self.left();
                 }
-                code::RIGHT => {
+                Op::Right => {
                     self.right();
                 }
-                code::EXIT_CURSOR => {
+                Op::ExitCursor => {
                     self.exit_under_cursor();
                 }
-                code::EXIT => {
+                Op::Exit => {
                     self.exit_cur_dir();
                 }
-                code::QUIT => {
+                Op::Quit => {
                     self.quit();
                 }
-                code::TOP => {
+                Op::Top => {
                     self.top();
                 }
-                code::BOTTOM => {
+                Op::Bottom => {
                     self.bottom();
                 }
-                code::SEARCH => {
+                Op::Search => {
                     self.search_txt = Vec::new();
                     self.mode = Mode::SEARCH;
                 }
-                code::NEXT_MATCH => {
+                Op::NextMatch => {
                     self.next_match(
                         if self.cursor + 1 < self.current_dir.len() {
                             self.cursor + 1
@@ -156,7 +156,7 @@ impl Browser {
                         false,
                     );
                 }
-                code::PREV_MATCH => {
+                Op::PrevMatch => {
                     self.next_match(
                         if self.cursor as isize - 1 >= 0 {
                             self.cursor - 1
@@ -166,8 +166,8 @@ impl Browser {
                         true,
                     );
                 }
-                code::PAGEUP => self.pageup(),
-                code::PAGEDOWN => self.pagedown(),
+                Op::PageUp => self.pageup(),
+                Op::PageDown => self.pagedown(),
                 _ => {
                     continue;
                 }
@@ -344,12 +344,12 @@ impl Browser {
             // ok to scroll: 1. at the end of history, search input is empty
             //               2. currently in the process of scolling through history
             match op {
-                code::UP => {
+                Op::Up => {
                     if self.search_history_index > 0 {
                         self.search_history_index -= 1;
                     }
                 },
-                code::DOWN => {
+                Op::Down => {
                     if self.search_history_index < self.search_history.len() {
                         self.search_history_index += 1;
                     }

@@ -12,7 +12,7 @@ use self::libc::{
     c_ushort, ioctl, tcgetattr, tcsetattr, termios, ECHO, ICANON, ISIG, STDIN_FILENO,
     STDOUT_FILENO, TCSAFLUSH, TIOCGWINSZ,
 };
-use crate::ops::{code, consts};
+use crate::ops::{Op, consts};
 use std::env::var;
 use std::fs::File;
 use std::io::{self, stdin, BufRead, Read, Write};
@@ -108,53 +108,53 @@ fn read_input() -> isize {
     byte[0] as isize
 }
 
-pub fn process_input() -> u8 {
+pub fn process_input() -> Op {
     let mut input = read_input();
 
     if input == 27 {
         // arrow keys
         match read_input() {
             91 => match read_input() {
-                65 => return code::UP,
-                66 => return code::DOWN,
-                67 => return code::RIGHT,
-                68 => return code::LEFT,
-                _ => return code::NOOP,
+                65 => return Op::Up,
+                66 => return Op::Down,
+                67 => return Op::Right,
+                68 => return Op::Left,
+                _ => return Op::Noop,
             },
-            _ => return code::NOOP,
+            _ => return Op::Noop,
         }
     }
 
     if input == 4 {
         // ctrl + D
-        return code::PAGEDOWN;
+        return Op::PageDown;
     } else if input == 21 {
         // ctrl + U
-        return code::PAGEUP;
+        return Op::PageUp;
     }
 
     // gg
     if input == 103 {
         input = read_input();
         if input == 103 {
-            return code::TOP;
+            return Op::Top;
         }
     }
 
     match input {
-        107 => return code::UP,          // k
-        106 => return code::DOWN,        // j
-        104 => return code::LEFT,        // h
-        108 => return code::RIGHT,       // l
-        111 => return code::EXIT_CURSOR, // o
-        10 => return code::EXIT_CURSOR,  // Enter
-        105 => return code::EXIT,        // i
-        113 => return code::QUIT,        // q
-        47 => return code::SEARCH,       // /
-        71 => return code::BOTTOM,       // G
-        110 => return code::NEXT_MATCH,  // n
-        78 => return code::PREV_MATCH,   // N
-        _ => return code::NOOP,
+        107 => return Op::Up,          // k
+        106 => return Op::Down,        // j
+        104 => return Op::Left,        // h
+        108 => return Op::Right,       // l
+        111 => return Op::ExitCursor, // o
+        10 => return Op::ExitCursor,  // Enter
+        105 => return Op::Exit,        // i
+        113 => return Op::Quit,        // q
+        47 => return Op::Search,       // /
+        71 => return Op::Bottom,       // G
+        110 => return Op::NextMatch,  // n
+        78 => return Op::PrevMatch,   // N
+        _ => return Op::Noop,
     }
 }
 
@@ -268,7 +268,7 @@ fn parse_utf8(_raw: &[u8], prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>) {
     (res, trunc)
 }
 
-pub fn read_chars_or_op(prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>, u8) {
+pub fn read_chars_or_op(prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>, Op) {
     let mut raw = [0_u8; 256];
     let mut _stdin = stdin();
     _stdin.read(&mut raw).expect("Failed to read");
@@ -276,13 +276,13 @@ pub fn read_chars_or_op(prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>, u8) {
     if char_vec[0] as usize == 27 && char_vec.len() > 1 {
         if char_vec[1] as usize == 91 && char_vec.len() > 2 {
             match char_vec[2] as usize {
-                65 => return (vec!['\0'], trunc, code::UP),
-                66 => return (vec!['\0'], trunc, code::DOWN),
-                67 => return (vec!['\0'], trunc, code::RIGHT),
-                68 => return (vec!['\0'], trunc, code::LEFT),
+                65 => return (vec!['\0'], trunc, Op::Up),
+                66 => return (vec!['\0'], trunc, Op::Down),
+                67 => return (vec!['\0'], trunc, Op::Right),
+                68 => return (vec!['\0'], trunc, Op::Left),
                 _ => {},
             };
         }
     }
-    (char_vec, trunc, code::NOOP)
+    (char_vec, trunc, Op::Noop)
 }
