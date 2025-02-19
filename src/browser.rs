@@ -16,6 +16,9 @@ use std::ops::Range;
 use std::path::PathBuf;
 use std::process::{exit, Command};
 use std::vec::Vec;
+use std::collections::VecDeque;
+
+const SEARCH_HISTORY_LEN: usize = 256;
 
 /// Directory browser
 pub struct Browser {
@@ -29,9 +32,11 @@ pub struct Browser {
     original_path: PathBuf,
     mode: Mode,
     search_txt: Vec<char>,
-    has_search_input: bool,
     editor: String,
     dest_file: Option<PathBuf>,
+    search_history: VecDeque<Vec<char>>,
+    search_history_index: usize,
+    trunc: Vec<u8>,
 }
 
 pub enum IterType {
@@ -139,7 +144,6 @@ impl Browser {
                 }
                 code::SEARCH => {
                     self.search_txt = Vec::new();
-                    self.has_search_input = false;
                     self.mode = Mode::SEARCH;
                 }
                 code::NEXT_MATCH => {
@@ -217,9 +221,24 @@ impl Browser {
         };
     }
 
+    fn save_history(&mut self) {
+        if self.search_history.len() >= SEARCH_HISTORY_LEN {
+            self.search_history.pop_front();
+        }
+        // don't save an empty line
+        if self.search_txt.len() == 0 {
+            return
+        }
+        if self.search_history_index < self.search_history.len() {
+            self.search_history.remove(self.search_history_index);
+        }
+        self.search_history.push_back(self.search_txt.clone());
+        self.search_history_index = self.search_history.len(); // out-of-bound on purpose
+    }
+
     /// Next search match, can be a reversed search
     fn next_match(&mut self, start: usize, rev: bool) {
-        if self.has_search_input == false {
+        if self.search_txt.len() == 0 {
             return;
         }
 
@@ -302,38 +321,49 @@ impl Browser {
     }
 
     fn search(&mut self) {
-        let (rc, is_ascii) = match util::read_utf8() {
-            Some((rc, is_ascii)) => (rc, is_ascii),
-            None => ('�', false),
-        };
-
-        // there should be no search input when trans first starts
-        self.has_search_input = true;
-
-        if is_ascii {
-            // esc
-            if rc as u8 == 27 {
+        let (mut chars, trunc, op) = util::read_chars_or_op(&self.trunc);
+        self.trunc = trunc;
+        let first_char = chars[0];
+        if first_char != '\0' {
+            if first_char as usize == 27 { // esc
                 self.mode = Mode::NORMAL;
+                self.search_history_index = self.search_history.len();
                 return;
-            }
-
-            // backspace
-            if rc as u8 == 127 {
+            } else if first_char as usize == 127 { // backspace
                 if self.search_txt.len() > 0 {
                     self.search_txt.pop().expect("search txt(pop) out of bound");
                 }
                 return;
-            }
-
-            // enter
-            if rc as u8 == 10 {
-                // search
+            } else if first_char as usize == 10 { // enter
+                self.save_history();
                 self.mode = Mode::NORMAL;
                 return;
             }
+            self.search_txt.append(&mut chars);
+        } else if self.search_txt.len() == 0 || self.search_history_index < self.search_history.len() {
+            // ok to scroll: 1. at the end of history, search input is empty
+            //               2. currently in the process of scolling through history
+            match op {
+                code::UP => {
+                    if self.search_history_index > 0 {
+                        self.search_history_index -= 1;
+                    }
+                },
+                code::DOWN => {
+                    if self.search_history_index < self.search_history.len() {
+                        self.search_history_index += 1;
+                    }
+                },
+                _ => {}
+            }
+            // when user is not browsing history, search_history_index should be
+            // search_history.len() + 1
+            if self.search_history_index < self.search_history.len() {
+                self.search_txt = self.search_history[self.search_history_index].clone();
+            } else {
+                self.search_txt = Vec::new();
+            }
         }
-
-        self.search_txt.push(rc);
         self.next_match(self.cursor, false);
     }
 
@@ -570,12 +600,14 @@ pub fn new(path: &str, dest_file: Option<String>) -> Browser {
         original_path: PathBuf::from("."),
         mode: Mode::NORMAL,
         search_txt: Vec::new(),
-        has_search_input: false,
         editor: util::get_editor(),
         dest_file: (|dest_file| match dest_file {
             Some(df) => Some(PathBuf::from(&df)),
             None => None,
         })(dest_file),
+        search_history: VecDeque::new(),
+        search_history_index: 0,
+        trunc: Vec::new(),
     };
 
     browser.init(&path);

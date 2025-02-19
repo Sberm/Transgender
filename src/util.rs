@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::str::from_utf8;
 use std::thread::sleep;
 use std::time::Duration;
+use std::vec::Vec;
 
 #[inline(always)]
 pub fn hide_cursor() {
@@ -232,47 +233,56 @@ pub fn get_editor() -> String {
     return String::from(consts::EDITOR);
 }
 
-/// Read a single utf8 char
-///
-/// returns
-///  A tuple of char and bool
-pub fn read_utf8() -> Option<(char, bool)> {
-    let mut c_bytes = [0u8; 4];
-    let mut bytes_cnt: usize = 0;
-
-    stdin()
-        .read(&mut c_bytes[0..1])
-        .expect("Failed to read the UTF8 prefix");
-
-    if c_bytes[0] & 0b10000000 == 0 {
-        bytes_cnt = 1;
-    } else if c_bytes[0] & 0b11000000 == 0b11000000 && c_bytes[0] & 0b00100000 == 0 {
-        bytes_cnt = 2;
-        stdin()
-            .read(&mut c_bytes[1..2])
-            .expect("Failed to read 1 byte for UTF8 char");
-    } else if c_bytes[0] & 0b11100000 == 0b11100000 && c_bytes[0] & 0b00010000 == 0 {
-        bytes_cnt = 3;
-        stdin()
-            .read(&mut c_bytes[1..3])
-            .expect("Failed to read 2 bytes for UTF8 char");
-    } else if c_bytes[0] & 0b11110000 == 0b11110000 && c_bytes[0] & 0b00001000 == 0 {
-        bytes_cnt = 4;
-        stdin()
-            .read(&mut c_bytes[1..])
-            .expect("Failed to read 3 bytes for UTF8 char");
+fn parse_utf8(_raw: &[u8], prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>) {
+    let mut res: Vec<char> = Vec::new();
+    let mut trunc: Vec<u8> = Vec::new();
+    let mut bytes_cnt = 0;
+    let mut i = 0;
+    let mut raw = prev_trunc.clone();
+    raw.extend_from_slice(_raw);
+    while i < raw.len() {
+        let this_byte = raw[i];
+        if this_byte == 0 {
+            break;
+        }
+        if this_byte & 0b10000000 == 0 {
+            bytes_cnt = 1;
+        } else if this_byte & 0b11000000 == 0b11000000 && this_byte & 0b00100000 == 0 {
+            bytes_cnt = 2;
+        } else if this_byte & 0b11100000 == 0b11100000 && this_byte & 0b00010000 == 0 {
+            bytes_cnt = 3;
+        } else if this_byte & 0b11110000 == 0b11110000 && this_byte & 0b00001000 == 0 {
+            bytes_cnt = 4;
+        }
+        // truncate bytes
+        if i + bytes_cnt > raw.len() {
+            trunc.extend_from_slice(&raw[i..raw.len()]);
+            break;
+        }
+        let s = String::from(
+            from_utf8(&raw[i..i + bytes_cnt]).expect("Failed to convert array of bytes to UTF8 string"),
+        );
+        i += bytes_cnt;
+        res.push(s.chars().nth(0).expect("Failed to get the first & only character"));
     }
+    (res, trunc)
+}
 
-    let is_ascii: bool = if bytes_cnt == 1 { true } else { false };
-
-    let s = String::from(
-        from_utf8(&c_bytes[0..bytes_cnt]).expect("Failed to convert bytes string to &str"),
-    );
-
-    let rc = s
-        .chars()
-        .nth(0)
-        .expect("Failed to get the first & only character");
-
-    Some((rc, is_ascii))
+pub fn read_chars_or_op(prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>, u8) {
+    let mut raw = [0_u8; 16];
+    let mut _stdin = stdin();
+    _stdin.read(&mut raw).expect("Failed to read");
+    let (char_vec, trunc) = parse_utf8(&mut raw, prev_trunc);
+    if char_vec[0] as usize == 27 && char_vec.len() > 1 {
+        if char_vec[1] as usize == 91 && char_vec.len() > 2 {
+            match char_vec[2] as usize {
+                65 => return (vec!['\0'], trunc, code::UP),
+                66 => return (vec!['\0'], trunc, code::DOWN),
+                67 => return (vec!['\0'], trunc, code::RIGHT),
+                68 => return (vec!['\0'], trunc, code::LEFT),
+                _ => {},
+            };
+        }
+    }
+    (char_vec, trunc, code::NOOP)
 }
