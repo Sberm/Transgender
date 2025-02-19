@@ -269,7 +269,7 @@ fn parse_utf8(_raw: &[u8], prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>) {
 }
 
 pub fn read_chars_or_op(prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>, u8) {
-    let mut raw = [0_u8; 16];
+    let mut raw = [0_u8; 256];
     let mut _stdin = stdin();
     _stdin.read(&mut raw).expect("Failed to read");
     let (char_vec, trunc) = parse_utf8(&mut raw, prev_trunc);
