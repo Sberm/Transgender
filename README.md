@@ -42,7 +42,9 @@ make install
 
 ### Shell configuration
 
-paste this shell script function into your shell configuration file, its location depends on which shell you use (`~/.bashrc`, `~/.bash_profile`, `source ~/.zshrc`, `~/.config/fish/config.fish`)
+Currently only supports `bash` and `zsh`.
+
+paste this shell script function into your shell configuration file, its location depends on which shell you use (`~/.bashrc`, `~/.bash_profile`, `source ~/.zshrc`)
 ```
 eval "$(transgender --sh)"
 ```
@@ -56,9 +58,6 @@ source ~/.bash_profile
 
 # zsh
 source ~/.zshrc
-
-# fish
-source ~/.config/fish/config.fish
 ```
 
 launch `Transgender.rs` with:
