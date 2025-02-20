@@ -12,7 +12,7 @@ use self::libc::{
     c_ushort, ioctl, tcgetattr, tcsetattr, termios, ECHO, ICANON, ISIG, STDIN_FILENO,
     STDOUT_FILENO, TCSAFLUSH, TIOCGWINSZ,
 };
-use crate::ops::{Op, consts};
+use crate::ops::{consts, Op};
 use std::env::var;
 use std::fs::File;
 use std::io::{self, stdin, BufRead, Read, Write};
@@ -142,16 +142,16 @@ pub fn process_input() -> Op {
     }
 
     match input {
-        107 => return Op::Up,          // k
-        106 => return Op::Down,        // j
-        104 => return Op::Left,        // h
-        108 => return Op::Right,       // l
+        107 => return Op::Up,         // k
+        106 => return Op::Down,       // j
+        104 => return Op::Left,       // h
+        108 => return Op::Right,      // l
         111 => return Op::ExitCursor, // o
         10 => return Op::ExitCursor,  // Enter
-        105 => return Op::Exit,        // i
-        113 => return Op::Quit,        // q
-        47 => return Op::Search,       // /
-        71 => return Op::Bottom,       // G
+        105 => return Op::Exit,       // i
+        113 => return Op::Quit,       // q
+        47 => return Op::Search,      // /
+        71 => return Op::Bottom,      // G
         110 => return Op::NextMatch,  // n
         78 => return Op::PrevMatch,   // N
         _ => return Op::Noop,
@@ -260,10 +260,15 @@ fn parse_utf8(_raw: &[u8], prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>) {
             break;
         }
         let s = String::from(
-            from_utf8(&raw[i..i + bytes_cnt]).expect("Failed to convert array of bytes to UTF8 string"),
+            from_utf8(&raw[i..i + bytes_cnt])
+                .expect("Failed to convert array of bytes to UTF8 string"),
         );
         i += bytes_cnt;
-        res.push(s.chars().nth(0).expect("Failed to get the first & only character"));
+        res.push(
+            s.chars()
+                .nth(0)
+                .expect("Failed to get the first & only character"),
+        );
     }
     (res, trunc)
 }
@@ -280,7 +285,7 @@ pub fn read_chars_or_op(prev_trunc: &Vec<u8>) -> (Vec<char>, Vec<u8>, Op) {
                 66 => return (vec![], trunc, Op::Down),
                 67 => return (vec![], trunc, Op::Right),
                 68 => return (vec![], trunc, Op::Left),
-                _ => {},
+                _ => {}
             };
         }
     }

@@ -7,16 +7,16 @@
 ╚═══════════════════════════════════════════════════════════════════════*/
 
 use crate::canvas;
-use crate::ops::{Op, consts, Mode};
+use crate::ops::{consts, Mode, Op};
 use crate::util;
 use regex_lite::RegexBuilder;
+use std::collections::VecDeque;
 use std::fs::read_dir;
 use std::iter::Rev;
 use std::ops::Range;
 use std::path::PathBuf;
 use std::process::{exit, Command};
 use std::vec::Vec;
-use std::collections::VecDeque;
 
 const SEARCH_HISTORY_LEN: usize = 256;
 
@@ -227,7 +227,7 @@ impl Browser {
         }
         // don't save an empty line
         if self.search_txt.len() == 0 {
-            return
+            return;
         }
         if self.search_history_index < self.search_history.len() {
             self.search_history.remove(self.search_history_index);
@@ -325,22 +325,27 @@ impl Browser {
         self.trunc = trunc;
         if chars.len() != 0 {
             let first_char = chars[0];
-            if first_char as usize == 27 { // esc
+            if first_char as usize == 27 {
+                // esc
                 self.mode = Mode::NORMAL;
                 self.search_history_index = self.search_history.len();
                 return;
-            } else if first_char as usize == 127 { // backspace
+            } else if first_char as usize == 127 {
+                // backspace
                 if self.search_txt.len() > 0 {
                     self.search_txt.pop().expect("search txt(pop) out of bound");
                 }
                 return;
-            } else if first_char as usize == 10 { // enter
+            } else if first_char as usize == 10 {
+                // enter
                 self.save_history();
                 self.mode = Mode::NORMAL;
                 return;
             }
             self.search_txt.append(&mut chars);
-        } else if self.search_txt.len() == 0 || self.search_history_index < self.search_history.len() {
+        } else if self.search_txt.len() == 0
+            || self.search_history_index < self.search_history.len()
+        {
             // ok to scroll: 1. at the end of history, search input is empty
             //               2. currently in the process of scolling through history
             match op {
@@ -348,12 +353,12 @@ impl Browser {
                     if self.search_history_index > 0 {
                         self.search_history_index -= 1;
                     }
-                },
+                }
                 Op::Down => {
                     if self.search_history_index < self.search_history.len() {
                         self.search_history_index += 1;
                     }
-                },
+                }
                 _ => {}
             }
             // when user is not browsing history, search_history_index should be
