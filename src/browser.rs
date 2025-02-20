@@ -323,8 +323,8 @@ impl Browser {
     fn search(&mut self) {
         let (mut chars, trunc, op) = util::read_chars_or_op(&self.trunc);
         self.trunc = trunc;
-        let first_char = chars[0];
-        if first_char != '\0' {
+        if chars.len() != 0 {
+            let first_char = chars[0];
             if first_char as usize == 27 { // esc
                 self.mode = Mode::NORMAL;
                 self.search_history_index = self.search_history.len();
